@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Community Alerts — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html" class="active">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="container">
+    <span class="eyebrow">Stay informed</span>
+    <h1>Community Alerts</h1>
+    <p>Crime reports, fraud warnings, and local news shared by your community. These are community-submitted — always verify urgent matters with local authorities.</p>
+    <div class="flex gap-8 mt-8" id="type-filters" style="flex-wrap:wrap;">
+      <button class="chip filter-chip active" data-type="">All</button>
+      <button class="chip filter-chip" data-type="crime">🚨 Crime</button>
+      <button class="chip filter-chip" data-type="fraud">⚠️ Fraud</button>
+      <button class="chip filter-chip" data-type="news">📰 News</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div id="alerts-list" class="grid gap-16"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<style>
+  .filter-chip { background: var(--color-surface); border: 1.5px solid var(--color-border); color: var(--color-ink-soft); }
+  .filter-chip.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+</style>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    let activeType = "";
+    const icons = { crime: "🚨", fraud: "⚠️", news: "📰" };
+    const sevBadge = { high: "badge-danger", medium: "badge-warning", low: "badge-info" };
+    const allAlerts = await LL.getAlerts();
+
+    function render() {
+      const alerts = allAlerts.filter(a => !activeType || a.type === activeType);
+      const list = document.getElementById("alerts-list");
+      if (!alerts.length) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📭</div>No alerts in this category yet.</div>`;
+        return;
+      }
+      list.innerHTML = alerts.map(a => `
+        <div class="alert-row">
+          <div class="alert-icon" style="background:var(--color-primary-light);">${icons[a.type] || "📌"}</div>
+          <div style="flex:1;">
+            <div class="flex-between" style="flex-wrap:wrap;gap:8px;">
+              <strong>${a.title}</strong>
+              <span class="badge ${sevBadge[a.severity] || 'badge-info'}">${a.severity} severity</span>
+            </div>
+            <p class="mb-0" style="margin-top:6px;">${a.body}</p>
+            <div class="alert-meta">${a.area} · ${LL.timeAgo(a.date)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    document.querySelectorAll(".filter-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        activeType = chip.dataset.type;
+        render();
+      });
+    });
+
+    render();
+  });
+</script>
+</body>
+</html>

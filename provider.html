@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Provider Profile — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html" class="active">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section id="provider-wrap">
+  <div class="container">
+    <a href="services.html" class="muted">&larr; Back to Local Services</a>
+    <div id="provider-content" class="mt-16"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const provider = await LL.getProvider(id);
+    const container = document.getElementById("provider-content");
+
+    if (!provider) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">🚫</div>Provider not found. <a href="services.html">Back to Local Services</a></div>`;
+      return;
+    }
+
+    async function renderReviews() {
+      const reviews = await LL.getReviews(provider.id);
+      const rating = await LL.averageRating(provider.id);
+      document.getElementById("rating-summary").innerHTML =
+        `${LL.starString(rating)} <span class="muted mono">${rating ? rating.toFixed(1) + " / 5" : "No reviews yet"} · ${reviews.length} review${reviews.length !== 1 ? "s" : ""}</span>`;
+
+      const list = document.getElementById("reviews-list");
+      if (!reviews.length) {
+        list.innerHTML = `<p class="muted">Be the first to leave a review for ${provider.name}.</p>`;
+      } else {
+        list.innerHTML = reviews.map(r => `
+          <div class="card" style="margin-bottom:10px;">
+            <div class="flex-between">
+              <strong>${r.name}</strong>
+              <span class="rating-stars">${LL.starString(r.rating)}</span>
+            </div>
+            <p class="mb-0 mt-8">${r.comment}</p>
+            <div class="alert-meta">${LL.timeAgo(r.date)}</div>
+          </div>
+        `).join("");
+      }
+    }
+
+    container.innerHTML = `
+      <div class="card">
+        <div class="provider-top">
+          <div class="flex gap-12">
+            <div class="provider-avatar" style="width:64px;height:64px;font-size:1.4rem;">${provider.name.charAt(0)}</div>
+            <div>
+              <h1 style="margin-bottom:4px;">${provider.name}</h1>
+              <span class="muted">${provider.category} · ${provider.area}</span>
+            </div>
+          </div>
+          ${provider.verified ? '<span class="badge badge-success">Verified provider</span>' : '<span class="badge badge-warning">Unverified</span>'}
+        </div>
+        <p class="mt-16">${provider.description}</p>
+        <div id="rating-summary" class="mt-8"></div>
+        <div class="provider-actions mt-16">
+          <a href="${LL.whatsappLink(provider.phone)}" target="_blank" rel="noopener" class="btn btn-primary">💬 Message on WhatsApp</a>
+        </div>
+      </div>
+
+      <div class="card mt-24">
+        <h2>Leave a review</h2>
+        <form id="review-form">
+          <div class="field">
+            <label>Your name</label>
+            <input type="text" id="review-name" required placeholder="Your name" />
+          </div>
+          <div class="field">
+            <label>Rating</label>
+            <select id="review-rating" required>
+              <option value="5">★★★★★ Excellent</option>
+              <option value="4">★★★★☆ Good</option>
+              <option value="3">★★★☆☆ Okay</option>
+              <option value="2">★★☆☆☆ Poor</option>
+              <option value="1">★☆☆☆☆ Terrible</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Comment</label>
+            <textarea id="review-comment" rows="3" required placeholder="Share your experience..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit Review</button>
+        </form>
+      </div>
+
+      <div class="mt-24">
+        <h2>Reviews</h2>
+        <div id="reviews-list"></div>
+      </div>
+    `;
+
+    const user = await LL.currentUserProfile();
+    if (user) document.getElementById("review-name").value = user.name;
+
+    await renderReviews();
+
+    document.getElementById("review-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await LL.addReview(provider.id, {
+        name: document.getElementById("review-name").value.trim(),
+        rating: parseInt(document.getElementById("review-rating").value, 10),
+        comment: document.getElementById("review-comment").value.trim(),
+      });
+      document.getElementById("review-form").reset();
+      if (user) document.getElementById("review-name").value = user.name;
+      await renderReviews();
+      LL.toast("Thanks for your review!");
+    });
+  });
+</script>
+</body>
+</html>

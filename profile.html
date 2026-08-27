@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Profile — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" class="active">Profile</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section id="profile-section" style="display:none;">
+  <div class="container">
+    <div class="card form-card">
+      <div class="flex gap-16" style="align-items:center;">
+        <div class="provider-avatar" style="width:56px;height:56px;font-size:1.3rem;" id="profile-initial"></div>
+        <div>
+          <h2 class="mb-0" id="profile-name"></h2>
+          <span class="muted" id="profile-email"></span>
+        </div>
+      </div>
+
+      <form id="profile-form" class="mt-24">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" id="edit-name" required />
+        </div>
+        <div class="field">
+          <label>Phone number</label>
+          <input type="tel" id="edit-phone" placeholder="+234 800 000 0000" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+      </form>
+
+      <div class="mt-24 card" style="background:var(--color-primary-light);border:none;">
+        <div class="flex-between">
+          <div>
+            <strong>Provider status</strong>
+            <p class="mb-0 muted" id="provider-status-text">Not a registered provider yet.</p>
+          </div>
+          <a href="become-provider.html" class="btn btn-ghost btn-sm" id="become-provider-btn">Become a Provider</a>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost btn-block mt-24" id="logout-btn">Log Out</button>
+    </div>
+  </div>
+</section>
+
+<section id="logged-out-section">
+  <div class="container">
+    <div class="empty-state">
+      <div class="icon">🔒</div>
+      You need to log in to view your profile.
+      <div class="mt-16"><a href="login.html" class="btn btn-primary">Log In</a></div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    await LL.waitForAuth();
+    const user = await LL.currentUserProfile();
+    if (!user) {
+      document.getElementById("logged-out-section").style.display = "block";
+      document.getElementById("profile-section").style.display = "none";
+      return;
+    }
+    document.getElementById("logged-out-section").style.display = "none";
+    document.getElementById("profile-section").style.display = "block";
+
+    document.getElementById("profile-initial").textContent = user.name.charAt(0);
+    document.getElementById("profile-name").textContent = user.name;
+    document.getElementById("profile-email").textContent = user.email;
+    document.getElementById("edit-name").value = user.name;
+    document.getElementById("edit-phone").value = user.phone || "";
+
+    const allRequests = await LL.getProviderRequests();
+    const requests = allRequests.filter(r => r.email === user.email);
+    if (requests.length) {
+      const latest = requests[requests.length - 1];
+      const statusText = { pending: "Your provider application is pending review.", approved: "You're an approved LifeLink provider!", rejected: "Your last application was not approved." };
+      document.getElementById("provider-status-text").textContent = statusText[latest.status] || "";
+      if (latest.status === "approved") document.getElementById("become-provider-btn").style.display = "none";
+    }
+
+    document.getElementById("profile-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await LL.updateUserProfile(user.id, {
+        name: document.getElementById("edit-name").value.trim(),
+        phone: document.getElementById("edit-phone").value.trim(),
+      });
+      LL.toast("Profile updated");
+      setTimeout(() => window.location.reload(), 600);
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await LL.logoutUser();
+      window.location.href = "index.html";
+    });
+  });
+</script>
+</body>
+</html>

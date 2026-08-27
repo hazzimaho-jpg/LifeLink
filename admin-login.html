@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Login — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+    </nav>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <div class="card form-card">
+      <span class="eyebrow">Restricted area</span>
+      <h2>Admin Login</h2>
+      <p>This login is separate from user accounts and controls the LifeLink admin dashboard.</p>
+      <form id="admin-login-form">
+        <div class="field">
+          <label>Admin password</label>
+          <input type="password" id="admin-password" required placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Log In as Admin</button>
+      </form>
+      <p class="field-hint mt-16">The admin password is stored as a Firebase secret (<code>ADMIN_PASSWORD</code>) and checked by the <code>adminLogin</code> Cloud Function — see the README for setup.</p>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="js/app.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+  document.getElementById("admin-login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await LL.adminLogin(document.getElementById("admin-password").value);
+      window.location.href = "admin.html";
+    } catch (err) {
+      LL.toast(err.message);
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local Services — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html" class="active">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="container">
+    <span class="eyebrow">Directory</span>
+    <h1>Local Services</h1>
+    <p>Browse trusted providers in your community, message them directly, and leave a review after service.</p>
+
+    <div class="card mt-16" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="field" style="flex:2;min-width:200px;margin-bottom:0;">
+        <label>Search</label>
+        <input type="text" id="search-input" placeholder="Search by name or description..." />
+      </div>
+      <div class="field" style="flex:1;min-width:160px;margin-bottom:0;">
+        <label>Category</label>
+        <select id="category-filter"><option value="">All categories</option></select>
+      </div>
+      <div class="field" style="flex:1;min-width:160px;margin-bottom:0;">
+        <label>Area</label>
+        <select id="area-filter"><option value="">All areas</option></select>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="muted" id="results-count"></span>
+    </div>
+    <div id="services-grid" class="grid grid-3"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const providers = await LL.getProviders();
+    const ratings = {};
+    await Promise.all(providers.map(async p => { ratings[p.id] = await LL.averageRating(p.id); }));
+
+    const catSelect = document.getElementById("category-filter");
+    const areaSelect = document.getElementById("area-filter");
+
+    [...new Set(providers.map(p => p.category))].sort().forEach(c => {
+      catSelect.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+    [...new Set(providers.map(p => p.area))].sort().forEach(a => {
+      areaSelect.innerHTML += `<option value="${a}">${a}</option>`;
+    });
+
+    function render() {
+      const q = document.getElementById("search-input").value.toLowerCase();
+      const cat = catSelect.value;
+      const area = areaSelect.value;
+
+      const filtered = providers.filter(p => {
+        const matchesQ = !q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+        const matchesCat = !cat || p.category === cat;
+        const matchesArea = !area || p.area === area;
+        return matchesQ && matchesCat && matchesArea;
+      });
+
+      document.getElementById("results-count").textContent = `${filtered.length} provider${filtered.length !== 1 ? "s" : ""} found`;
+
+      const grid = document.getElementById("services-grid");
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div>No providers match your search.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => {
+        const rating = ratings[p.id] || 0;
+        return `
+        <div class="card provider-card">
+          <div class="provider-top">
+            <div class="flex gap-12">
+              <div class="provider-avatar">${p.name.charAt(0)}</div>
+              <div>
+                <h3 style="margin-bottom:2px;">${p.name}</h3>
+                <span class="muted">${p.category} · ${p.area}</span>
+              </div>
+            </div>
+            ${p.verified ? '<span class="badge badge-success">Verified</span>' : ''}
+          </div>
+          <p>${p.description}</p>
+          <div class="rating-stars">${LL.starString(rating)} <span class="muted mono">${rating ? rating.toFixed(1) : "No reviews yet"}</span></div>
+          <div class="provider-actions">
+            <a href="provider.html?id=${p.id}" class="btn btn-ghost btn-sm">View Profile</a>
+            <a href="${LL.whatsappLink(p.phone)}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Message on WhatsApp</a>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    document.getElementById("search-input").addEventListener("input", render);
+    catSelect.addEventListener("change", render);
+    areaSelect.addEventListener("change", render);
+    render();
+  });
+</script>
+</body>
+</html>

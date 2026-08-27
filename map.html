@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Community Map — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html">Local Services</a>
+      <a href="map.html" class="active">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="container">
+    <span class="eyebrow">Community map</span>
+    <h1>Services & reports near you</h1>
+    <p>Blue pins are local service providers. Orange pins are reported community alerts. Click a pin for details.</p>
+    <div class="flex gap-12 mt-8" style="flex-wrap:wrap;">
+      <label class="flex gap-8" style="align-items:center;font-weight:600;font-size:0.9rem;"><input type="checkbox" id="toggle-providers" checked /> Show providers</label>
+      <label class="flex gap-8" style="align-items:center;font-weight:600;font-size:0.9rem;"><input type="checkbox" id="toggle-alerts" checked /> Show alerts</label>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div id="map-canvas"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const providers = await LL.getProviders();
+    const alerts = await LL.getAlerts();
+    const ratings = {};
+    await Promise.all(providers.map(async p => { ratings[p.id] = await LL.averageRating(p.id); }));
+
+    const map = L.map("map-canvas").setView([6.5244, 3.3792], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 18,
+    }).addTo(map);
+
+    const providerIcon = L.divIcon({
+      html: '<div style="background:#1CA7EC;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>',
+      className: "", iconSize: [16, 16],
+    });
+    const alertIcon = L.divIcon({
+      html: '<div style="background:#FF6B5D;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.3);"></div>',
+      className: "", iconSize: [16, 16],
+    });
+
+    const providerLayer = L.layerGroup().addTo(map);
+    const alertLayer = L.layerGroup().addTo(map);
+
+    providers.forEach(p => {
+      if (!p.lat || !p.lon) return;
+      const rating = ratings[p.id] || 0;
+      L.marker([p.lat, p.lon], { icon: providerIcon }).addTo(providerLayer)
+        .bindPopup(`<strong>${p.name}</strong><br>${p.category} · ${p.area}<br>${rating ? LL.starString(rating) + " " + rating.toFixed(1) : "No reviews yet"}<br><a href="provider.html?id=${p.id}">View profile →</a>`);
+    });
+
+    alerts.forEach(a => {
+      if (!a.lat || !a.lon) return;
+      L.marker([a.lat, a.lon], { icon: alertIcon }).addTo(alertLayer)
+        .bindPopup(`<strong>${a.title}</strong><br><span style="text-transform:capitalize;">${a.type}</span> · ${a.area}<br>${LL.timeAgo(a.date)}`);
+    });
+
+    document.getElementById("toggle-providers").addEventListener("change", (e) => {
+      map[e.target.checked ? "addLayer" : "removeLayer"](providerLayer);
+    });
+    document.getElementById("toggle-alerts").addEventListener("change", (e) => {
+      map[e.target.checked ? "addLayer" : "removeLayer"](alertLayer);
+    });
+  });
+</script>
+</body>
+</html>

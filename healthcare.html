@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Healthcare Services — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="services.html">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html" class="active">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section style="padding-bottom:0;">
+  <div class="container">
+    <span class="eyebrow">Live data · OpenStreetMap</span>
+    <h1>Healthcare near you</h1>
+    <p>Hospitals, clinics, and pharmacies pulled from live OpenStreetMap data based on your location.</p>
+    <div class="card flex-between mt-8" style="flex-wrap:wrap;gap:10px;">
+      <span class="muted" id="location-label">Detecting your location…</span>
+      <button class="btn btn-ghost btn-sm" id="retry-location">Use my location</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div id="healthcare-status" class="empty-state" style="display:none;">
+      <div class="icon">🏥</div>
+      <span id="healthcare-status-text">Loading nearby healthcare facilities…</span>
+    </div>
+    <div id="map-canvas" style="display:none;margin-bottom:24px;"></div>
+    <div id="healthcare-list" class="grid grid-3"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module">
+  document.addEventListener("DOMContentLoaded", () => {
+    const statusBox = document.getElementById("healthcare-status");
+    const statusText = document.getElementById("healthcare-status-text");
+    const mapBox = document.getElementById("map-canvas");
+    const listBox = document.getElementById("healthcare-list");
+    const locationLabel = document.getElementById("location-label");
+
+    function setStatus(text) {
+      statusBox.style.display = "block";
+      statusText.textContent = text;
+    }
+
+    function loadFacilities(lat, lon, label) {
+      locationLabel.textContent = `Showing results near ${label}`;
+      setStatus("Loading nearby healthcare facilities from OpenStreetMap…");
+      listBox.innerHTML = "";
+      mapBox.style.display = "none";
+
+      const radius = 5000;
+      const query = `[out:json][timeout:25];(
+        node["amenity"~"hospital|clinic|pharmacy|doctors"](around:${radius},${lat},${lon});
+      );out center 30;`;
+
+      fetch("https://overpass-api.de/api/interpreter", {
+        method: "POST",
+        body: query,
+      })
+        .then(r => r.json())
+        .then(data => {
+          const elements = (data.elements || []).filter(e => e.tags && e.tags.name);
+          if (!elements.length) {
+            setStatus("No named healthcare facilities found nearby. Try a different area.");
+            return;
+          }
+          statusBox.style.display = "none";
+          mapBox.style.display = "block";
+
+          const map = L.map("map-canvas").setView([lat, lon], 13);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+          }).addTo(map);
+          L.marker([lat, lon]).addTo(map).bindPopup("You are here").openPopup();
+
+          const typeIcon = { hospital: "🏥", clinic: "🩺", pharmacy: "💊", doctors: "👨‍⚕️" };
+
+          listBox.innerHTML = elements.map(e => {
+            const type = e.tags.amenity;
+            L.marker([e.lat, e.lon]).addTo(map).bindPopup(`<strong>${e.tags.name}</strong><br>${type}`);
+            return `
+              <div class="card">
+                <h3>${typeIcon[type] || "🏥"} ${e.tags.name}</h3>
+                <span class="badge badge-info" style="text-transform:capitalize;">${type}</span>
+                <p class="mt-8 mb-0">${e.tags["addr:street"] ? e.tags["addr:street"] + (e.tags["addr:housenumber"] ? " " + e.tags["addr:housenumber"] : "") : "Address not listed"}</p>
+                ${e.tags.phone ? `<p class="mb-0 muted">${e.tags.phone}</p>` : ""}
+                <a class="btn btn-ghost btn-sm mt-8" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${e.lat}&mlon=${e.lon}#map=17/${e.lat}/${e.lon}">Open in Map</a>
+              </div>`;
+          }).join("");
+        })
+        .catch(() => setStatus("Couldn't load healthcare data right now — please try again shortly."));
+    }
+
+    function locate() {
+      setStatus("Detecting your location…");
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => loadFacilities(pos.coords.latitude, pos.coords.longitude, "your current location"),
+          () => loadFacilities(6.5244, 3.3792, "Lagos (default — location unavailable)"),
+          { timeout: 6000 }
+        );
+      } else {
+        loadFacilities(6.5244, 3.3792, "Lagos (default)");
+      }
+    }
+
+    document.getElementById("retry-location").addEventListener("click", locate);
+    locate();
+  });
+</script>
+</body>
+</html>

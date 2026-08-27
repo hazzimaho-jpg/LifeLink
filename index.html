@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LifeLink — Your Community, Connected</title>
+<meta name="description" content="Connect with local services, stay informed, and strengthen your community with LifeLink." />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="apple-touch-icon" href="icons/icon-apple-touch.png" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink
+    </div>
+    <nav class="main-nav">
+      <a href="index.html" class="active">Home</a>
+      <a href="services.html">Local Services</a>
+      <a href="map.html">Map</a>
+      <a href="healthcare.html">Healthcare</a>
+      <a href="alerts.html">Alerts</a>
+      <a href="become-provider.html">Become a Provider</a>
+      <a href="profile.html" data-auth="in">Profile</a>
+      <a href="login.html" data-auth="out">Log In</a>
+    </nav>
+    <button class="nav-toggle" aria-label="Toggle menu">☰</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <span class="eyebrow">Community network</span>
+    <h1>Everything your neighborhood needs, in one place.</h1>
+    <p style="max-width:560px;font-size:1.05rem;">Find trusted local services, stay ahead of safety alerts, check the weather, and get help fast — all built by and for your community.</p>
+    <div class="flex gap-12 mt-16" style="flex-wrap:wrap;">
+      <a href="services.html" class="btn btn-primary">Find a Service</a>
+      <a href="become-provider.html" class="btn btn-ghost">Become a Provider</a>
+    </div>
+
+    <div class="pulse-strip" id="pulse-strip">
+      <div class="pulse-item">
+        <span class="pulse-label"><span class="pulse-dot"></span>Weather now</span>
+        <span class="pulse-value" id="pulse-weather">Loading…</span>
+      </div>
+      <div class="pulse-item">
+        <span class="pulse-label">Active providers</span>
+        <span class="pulse-value" id="pulse-providers">—</span>
+      </div>
+      <div class="pulse-item">
+        <span class="pulse-label">Open alerts</span>
+        <span class="pulse-value" id="pulse-alerts">—</span>
+      </div>
+      <div class="pulse-item">
+        <span class="pulse-label">Avg. rating</span>
+        <span class="pulse-value" id="pulse-rating">—</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Explore LifeLink</h2>
+    </div>
+    <div class="grid grid-4">
+      <a href="services.html" class="card" style="text-decoration:none;">
+        <h3>🧰 Local Services</h3>
+        <p class="mb-0">Browse verified plumbers, electricians, tutors, and more near you.</p>
+      </a>
+      <a href="map.html" class="card" style="text-decoration:none;">
+        <h3>🗺️ Community Map</h3>
+        <p class="mb-0">See services and reported issues plotted across your area.</p>
+      </a>
+      <a href="healthcare.html" class="card" style="text-decoration:none;">
+        <h3>🏥 Healthcare</h3>
+        <p class="mb-0">Find nearby hospitals and clinics using live location data.</p>
+      </a>
+      <a href="alerts.html" class="card" style="text-decoration:none;">
+        <h3>🚨 Alerts</h3>
+        <p class="mb-0">Crime, fraud, and community news reported by neighbors.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Recent community alerts</h2>
+      <a href="alerts.html" class="btn btn-ghost btn-sm">View all</a>
+    </div>
+    <div id="home-alerts" class="grid gap-16"></div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-head">
+      <h2>Top-rated providers</h2>
+      <a href="services.html" class="btn btn-ghost btn-sm">See all services</a>
+    </div>
+    <div id="home-providers" class="grid grid-3"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>© 2026 LifeLink. Built for stronger communities.</span>
+    <span><a href="admin-login.html">Admin</a></span>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+<script type="module" src="js/chatbot.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const providers = await LL.getProviders();
+    const alerts = await LL.getAlerts();
+    document.getElementById("pulse-providers").textContent = providers.length;
+    document.getElementById("pulse-alerts").textContent = alerts.length;
+
+    const ratings = await Promise.all(providers.map(p => LL.averageRating(p.id)));
+    const validRatings = ratings.filter(r => r > 0);
+    const avg = validRatings.length ? (validRatings.reduce((a,b)=>a+b,0)/validRatings.length) : 0;
+    document.getElementById("pulse-rating").textContent = avg ? avg.toFixed(1) + " ★" : "No ratings yet";
+
+    // --- Weather (Open-Meteo, no API key needed) ---
+    function loadWeather(lat, lon, label) {
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`)
+        .then(r => r.json())
+        .then(data => {
+          const t = Math.round(data.current.temperature_2m);
+          document.getElementById("pulse-weather").textContent = `${t}°C · ${label}`;
+        })
+        .catch(() => { document.getElementById("pulse-weather").textContent = "Unavailable"; });
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => loadWeather(pos.coords.latitude, pos.coords.longitude, "Your area"),
+        () => loadWeather(6.5244, 3.3792, "Lagos (default)"),
+        { timeout: 5000 }
+      );
+    } else {
+      loadWeather(6.5244, 3.3792, "Lagos (default)");
+    }
+
+    // --- Recent alerts preview ---
+    const alertsWrap = document.getElementById("home-alerts");
+    const icons = { crime: "🚨", fraud: "⚠️", news: "📰" };
+    const sevBadge = { high: "badge-danger", medium: "badge-warning", low: "badge-info" };
+    if (!alerts.length) {
+      alertsWrap.innerHTML = `<div class="empty-state"><div class="icon">📭</div>No alerts yet.</div>`;
+    } else {
+      alertsWrap.innerHTML = alerts.slice(0, 3).map(a => `
+        <div class="alert-row">
+          <div class="alert-icon" style="background:var(--color-primary-light);">${icons[a.type] || "📌"}</div>
+          <div style="flex:1;">
+            <div class="flex-between">
+              <strong>${a.title}</strong>
+              <span class="badge ${sevBadge[a.severity] || 'badge-info'}">${a.severity}</span>
+            </div>
+            <p class="mb-0" style="margin-top:4px;">${a.body}</p>
+            <div class="alert-meta">${a.area} · ${LL.timeAgo(a.date)}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // --- Top providers preview ---
+    const provWrap = document.getElementById("home-providers");
+    const withRatings = await Promise.all(providers.map(async p => ({ p, rating: await LL.averageRating(p.id) })));
+    const sorted = withRatings.sort((a,b) => b.rating - a.rating).slice(0,3);
+    provWrap.innerHTML = sorted.map(({p, rating}) => `
+      <a href="provider.html?id=${p.id}" class="card provider-card" style="text-decoration:none;">
+        <div class="provider-top">
+          <div class="flex gap-12">
+            <div class="provider-avatar">${p.name.charAt(0)}</div>
+            <div>
+              <h3 style="margin-bottom:2px;">${p.name}</h3>
+              <span class="muted">${p.category} · ${p.area}</span>
+            </div>
+          </div>
+          ${p.verified ? '<span class="badge badge-success">Verified</span>' : ''}
+        </div>
+        <div class="rating-stars">${LL.starString(rating)} <span class="muted mono">${rating ? rating.toFixed(1) : "New"}</span></div>
+      </a>`
+    ).join("");
+  });
+</script>
+</body>
+</html>

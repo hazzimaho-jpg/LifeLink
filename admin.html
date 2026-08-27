@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Dashboard — LifeLink</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#1CA7EC" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .admin-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .admin-tab { padding: 10px 16px; border-radius: 999px; border: 1.5px solid var(--color-border); background: var(--color-surface); font-weight: 700; font-size: 0.88rem; cursor: pointer; color: var(--color-ink-soft); }
+  .admin-tab.active { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
+  .admin-panel { display: none; }
+  .admin-panel.active { display: block; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; }
+  th { color: var(--color-ink-soft); font-family: var(--font-mono); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand">
+      <span class="dot-link"><svg viewBox="0 0 24 24" fill="none"><path d="M8 12h8M9 6l-3 3a3 3 0 000 4.24M15 18l3-3a3 3 0 000-4.24" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></span>
+      LifeLink <span class="badge badge-info" style="margin-left:8px;">Admin</span>
+    </div>
+    <nav class="main-nav">
+      <a href="index.html">View Site</a>
+    </nav>
+    <button class="btn btn-ghost btn-sm" id="admin-logout">Log Out</button>
+  </div>
+</header>
+
+<section>
+  <div class="container">
+    <h1>Admin Dashboard</h1>
+    <div class="pulse-strip mt-16" style="margin-top:16px;">
+      <div class="pulse-item"><span class="pulse-label">Providers</span><span class="pulse-value" id="stat-providers">0</span></div>
+      <div class="pulse-item"><span class="pulse-label">Pending requests</span><span class="pulse-value" id="stat-requests">0</span></div>
+      <div class="pulse-item"><span class="pulse-label">Registered users</span><span class="pulse-value" id="stat-users">0</span></div>
+      <div class="pulse-item"><span class="pulse-label">Active alerts</span><span class="pulse-value" id="stat-alerts">0</span></div>
+    </div>
+
+    <div class="admin-tabs mt-32">
+      <button class="admin-tab active" data-panel="panel-requests">Provider Requests</button>
+      <button class="admin-tab" data-panel="panel-providers">Providers</button>
+      <button class="admin-tab" data-panel="panel-alerts">Alerts</button>
+      <button class="admin-tab" data-panel="panel-users">Users</button>
+    </div>
+
+    <div id="panel-requests" class="admin-panel active card">
+      <h2>Pending Provider Requests</h2>
+      <div class="table-wrap"><table id="requests-table">
+        <thead><tr><th>Business</th><th>Category</th><th>Area</th><th>Contact</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div id="panel-providers" class="admin-panel card">
+      <h2>All Providers</h2>
+      <div class="table-wrap"><table id="providers-table">
+        <thead><tr><th>Name</th><th>Category</th><th>Area</th><th>Verified</th><th>Rating</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div id="panel-alerts" class="admin-panel card">
+      <div class="flex-between">
+        <h2 class="mb-0">Manage Alerts</h2>
+        <button class="btn btn-primary btn-sm" id="new-alert-btn">+ New Alert</button>
+      </div>
+      <form id="alert-form" style="display:none;" class="mt-16 card" style="background:var(--color-bg);">
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Type</label>
+            <select id="af-type"><option value="crime">Crime</option><option value="fraud">Fraud</option><option value="news">News</option></select>
+          </div>
+          <div class="field">
+            <label>Severity</label>
+            <select id="af-severity"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select>
+          </div>
+        </div>
+        <div class="field"><label>Title</label><input type="text" id="af-title" required /></div>
+        <div class="field"><label>Area</label><input type="text" id="af-area" required /></div>
+        <div class="field"><label>Details</label><textarea id="af-body" rows="3" required></textarea></div>
+        <button type="submit" class="btn btn-primary">Publish Alert</button>
+      </form>
+      <div class="table-wrap mt-16"><table id="alerts-table">
+        <thead><tr><th>Title</th><th>Type</th><th>Severity</th><th>Area</th><th>Posted</th><th>Action</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+
+    <div id="panel-users" class="admin-panel card">
+      <h2>Registered Users</h2>
+      <div class="table-wrap"><table id="users-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="js/app.js"></script>
+<script type="module">
+  import { LL } from "./js/app.js";
+
+  await LL.waitForAuth();
+  const ok = await LL.guardAdmin();
+  if (!ok) throw new Error("Not admin — redirecting.");
+
+  document.getElementById("admin-logout").addEventListener("click", async () => {
+    await LL.adminLogout();
+    window.location.href = "index.html";
+  });
+
+  document.querySelectorAll(".admin-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".admin-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".admin-panel").forEach(p => p.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById(tab.dataset.panel).classList.add("active");
+    });
+  });
+
+  async function renderStats(providers, requests, users, alerts) {
+    document.getElementById("stat-providers").textContent = providers.length;
+    document.getElementById("stat-requests").textContent = requests.filter(r => r.status === "pending").length;
+    document.getElementById("stat-users").textContent = users.length;
+    document.getElementById("stat-alerts").textContent = alerts.length;
+  }
+
+  function renderRequests(requests) {
+    const tbody = document.querySelector("#requests-table tbody");
+    const pending = requests.filter(r => r.status === "pending");
+    tbody.innerHTML = pending.length ? pending.map(r => `
+      <tr>
+        <td>${r.businessName}</td>
+        <td>${r.category}</td>
+        <td>${r.area}</td>
+        <td>${r.email}<br><span class="muted">${r.phone}</span></td>
+        <td><span class="badge badge-warning">pending</span></td>
+        <td class="flex gap-8">
+          <button class="btn btn-primary btn-sm" onclick="approveReq('${r.id}')">Approve</button>
+          <button class="btn btn-ghost btn-sm" onclick="rejectReq('${r.id}')">Reject</button>
+        </td>
+      </tr>`).join("") : `<tr><td colspan="6" class="muted">No pending requests.</td></tr>`;
+  }
+
+  window.approveReq = async function (id) { await LL.approveProviderRequest(id); LL.toast("Provider approved"); renderAll(); };
+  window.rejectReq = async function (id) { await LL.rejectProviderRequest(id); LL.toast("Request rejected"); renderAll(); };
+
+  async function renderProviders(providers) {
+    const tbody = document.querySelector("#providers-table tbody");
+    const rows = await Promise.all(providers.map(async p => {
+      const rating = await LL.averageRating(p.id);
+      return `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.category}</td>
+        <td>${p.area}</td>
+        <td>${p.verified ? '<span class="badge badge-success">Yes</span>' : '<span class="badge badge-warning">No</span>'}</td>
+        <td>${rating ? rating.toFixed(1) + " ★" : "—"}</td>
+        <td class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="toggleVerify('${p.id}', ${!p.verified})">${p.verified ? "Unverify" : "Verify"}</button>
+          <button class="btn btn-danger btn-sm" onclick="removeProvider('${p.id}')">Delete</button>
+        </td>
+      </tr>`;
+    }));
+    tbody.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="6" class="muted">No providers yet.</td></tr>`;
+  }
+  window.toggleVerify = async function (id, val) { await LL.updateProvider(id, { verified: val }); renderAll(); };
+  window.removeProvider = async function (id) { if (confirm("Delete this provider?")) { await LL.deleteProvider(id); renderAll(); } };
+
+  function renderAlerts(alerts) {
+    const tbody = document.querySelector("#alerts-table tbody");
+    tbody.innerHTML = alerts.length ? alerts.map(a => `
+      <tr>
+        <td>${a.title}</td>
+        <td style="text-transform:capitalize;">${a.type}</td>
+        <td>${a.severity}</td>
+        <td>${a.area}</td>
+        <td>${LL.timeAgo(a.date)}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="removeAlert('${a.id}')">Delete</button></td>
+      </tr>`).join("") : `<tr><td colspan="6" class="muted">No alerts yet.</td></tr>`;
+  }
+  window.removeAlert = async function (id) { await LL.deleteAlert(id); renderAll(); };
+
+  document.getElementById("new-alert-btn").addEventListener("click", () => {
+    const f = document.getElementById("alert-form");
+    f.style.display = f.style.display === "none" ? "block" : "none";
+  });
+  document.getElementById("alert-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await LL.addAlert({
+      type: document.getElementById("af-type").value,
+      severity: document.getElementById("af-severity").value,
+      title: document.getElementById("af-title").value.trim(),
+      area: document.getElementById("af-area").value.trim(),
+      body: document.getElementById("af-body").value.trim(),
+    });
+    e.target.reset();
+    e.target.style.display = "none";
+    LL.toast("Alert published");
+    renderAll();
+  });
+
+  function renderUsers(users) {
+    const tbody = document.querySelector("#users-table tbody");
+    tbody.innerHTML = users.length ? users.map(u => `
+      <tr>
+        <td>${u.name}</td>
+        <td>${u.email}</td>
+        <td>${u.phone || "—"}</td>
+        <td>${u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}</td>
+      </tr>`).join("") : `<tr><td colspan="4" class="muted">No registered users yet.</td></tr>`;
+  }
+
+  async function renderAll() {
+    const [providers, requests, users, alerts] = await Promise.all([
+      LL.getProviders(), LL.getProviderRequests(), LL.getAllUsers(), LL.getAlerts(),
+    ]);
+    renderStats(providers, requests, users, alerts);
+    renderRequests(requests);
+    await renderProviders(providers);
+    renderAlerts(alerts);
+    renderUsers(users);
+  }
+  renderAll();
+</script>
+</body>
+</html>
